@@ -30,12 +30,12 @@ static const char *TAG = "epd-gray-demo";
 #define DC_GPIO         19
 #define RESET_GPIO      21
 
-#define XPM_COLOR_LEVEL 16
+#define XPM_COLOR_LEVEL 4
 #define EPD_WIDTH       122
 #define EPD_HEIGHT      250
 
-extern const char R_C_xpm_start[] asm("_binary_R_C_16_xpm_start");
-extern const char R_C_xpm_end[] asm("_binary_R_C_16_xpm_end");
+extern const char R_C_xpm_start[] asm("_binary_R_C_4_xpm_start");
+extern const char R_C_xpm_end[] asm("_binary_R_C_4_xpm_end");
 
 const char epd_init_sequence[] = {
 0x01,0xf9,0x00,0x3a,0x06,0x3b,0x0b,0x11,0x03,0x44,0x00,0x0f,0x45,
@@ -263,12 +263,12 @@ void app_main(void)
     epd_display_update(dev);
 
     /* 分15次进行刷新,因为全白不需要刷新 */
-    for (i = 0; i < 15; i++) {
-        if (i <= 4)
-            epd_gray_lut[16] = 0x3;
-        if (i >=12)
-            epd_gray_lut[16] = 0x1;
-        else
+    for (i = 0; i < 3; i++) {
+        if (i == 0)
+            epd_gray_lut[16] = 0x12;
+        else if (i == 1)
+            epd_gray_lut[16] = 0x6;
+        else if (i == 2)
             epd_gray_lut[16] = 0x2;
 
         epd_update_lut(dev, epd_gray_lut);
