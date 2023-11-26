@@ -46,4 +46,4 @@ set(srcs "epd-gray-demo.c"
 
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS "u8g2/csrc" "u8g2/cppsrc"
-                       )
+                       EMBED_FILES "moon.xpm")

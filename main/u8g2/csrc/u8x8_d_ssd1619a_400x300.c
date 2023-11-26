@@ -94,6 +94,54 @@ static const uint8_t u8x8_d_ssd1619a_refresh_part_init_seq[] = {
     U8X8_END()
 };
 
+static const uint8_t u8x8_d_ssd1619a_refresh_4gray_seq1[] = {
+    U8X8_START_TRANSFER(),
+    U8X8_C(0x32),
+    U8X8_A(0x05), U8X8_A(0x00), U8X8_A(0x10), U8X8_A(0x10),
+    U8X8_A(0x10), U8X8_A(0x00), U8X8_A(0x01),
+    U8X8_A(0xa0), U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x05), U8X8_A(0x00), U8X8_A(0x05), U8X8_A(0x10),
+    U8X8_A(0x10), U8X8_A(0x00), U8X8_A(0x01),
+    U8X8_A(0xa0), U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x05), U8X8_A(0x01),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_END_TRANSFER(),
+    U8X8_END()
+};
+
+static const uint8_t u8x8_d_ssd1619a_refresh_4gray_seq2[] = {
+    U8X8_START_TRANSFER(),
+    U8X8_C(0x32),
+    U8X8_A(0x05), U8X8_A(0x00), U8X8_A(0x10), U8X8_A(0x10),
+    U8X8_A(0x10), U8X8_A(0x00), U8X8_A(0x01),
+    U8X8_A(0xa0), U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x05), U8X8_A(0x00), U8X8_A(0x05), U8X8_A(0x10),
+    U8X8_A(0x10), U8X8_A(0x00), U8X8_A(0x01),
+    U8X8_A(0xa0), U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A(0x00), U8X8_A(0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x01), U8X8_A(0x01),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_A4(0x00, 0x00, 0x00, 0x00), U8X8_A(0x00),
+    U8X8_END_TRANSFER(),
+    U8X8_END()
+};
+
 static const uint8_t u8x8_d_ssd1619a_powersave0_seq[] = {
     U8X8_START_TRANSFER(),
     U8X8_CA(0x22, 0xc0),
@@ -223,8 +271,12 @@ uint8_t u8x8_d_ssd1619a_400x300(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void
         break;
     case U8X8_MSG_DISPLAY_REFRESH:
         if (arg_int != refresh_mode) {
-            if (arg_int)
+            if (arg_int == 0x01)
                 u8x8_cad_SendSequence(u8x8, u8x8_d_ssd1619a_refresh_part_init_seq);
+            else if (arg_int == 0x11)
+                u8x8_cad_SendSequence(u8x8, u8x8_d_ssd1619a_refresh_4gray_seq1);
+            else if (arg_int == 0x12)
+                u8x8_cad_SendSequence(u8x8, u8x8_d_ssd1619a_refresh_4gray_seq2);
             else
                 u8x8_cad_SendSequence(u8x8, u8x8_d_ssd1619a_refresh_full_init_seq);
             refresh_mode = arg_int;

@@ -23,6 +23,9 @@
 #include "soc/io_mux_reg.h"
 #include "u8g2.h"
 
+extern const char moon_xpm_start[] asm("_binary_moon_xpm_start");
+extern const char moon_xpm_end[] asm("_binary_moon_xpm_end");
+
 static const char *TAG = "epd-gray-demo";
 
 #define CS_GPIO         GPIO_NUM_15
@@ -102,7 +105,6 @@ uint8_t u8g2_esp32_spi_byte_cb(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void 
         while(gpio_get_level(BUSY_GPIO) == 1)
             vTaskDelay(10/portTICK_PERIOD_MS);
 
-        //ESP_LOGI(TAG, "... Transmitting %d bytes.", arg_int);
         ESP_ERROR_CHECK(spi_device_polling_transmit(spi_dev, &trans_desc));
         break;
     }
@@ -159,41 +161,113 @@ uint8_t u8g2_esp32_gpio_and_delay_cb(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int,
     return 0;
 }
 
-void u8x8_RefreshDisplayV(u8x8_t *u8x8, uint16_t v)
+void u8x8_RefreshDisplayM(u8x8_t *u8x8, uint8_t v)
 {
-  u8x8->display_cb(u8x8, U8X8_MSG_DISPLAY_REFRESH, v, NULL);  
+    u8x8->display_cb(u8x8, U8X8_MSG_DISPLAY_REFRESH, v, NULL);
+}
+
+static char *gray4_xpm_cov(const char *xpm)
+{
+    int ret;
+    char *line_begin;
+    char *line_end;
+    uint32_t width, height, colors;
+
+    char color_tab[4];
+    char *pic;
+
+    int i, j, k;
+
+    /* 判断是否是XPM文件 */
+    line_begin = (char *)xpm;
+    line_end = strstr(line_begin, "\n");
+    if (strstr(line_begin, "XPM") == NULL)
+        return NULL;
+
+    /* 忽略掉数组名称那一行 */
+    line_begin = line_end + 1;
+    line_end = strstr(line_begin, "\n");
+
+    /* 读取图片尺寸和颜色信息 */
+    line_begin = line_end + 1;
+    line_end = strstr(line_begin, "\n");
+    ret = sscanf(line_begin, "\"%d %d %d ", &width, &height, &colors);
+    if (ret != 3)
+        return NULL;
+
+    ESP_LOGI(TAG, "width %d, height %d", width, height);
+
+    pic = (char *)malloc(width * height);
+    if (!pic)
+        return NULL;
+
+    /* 这里先默认认为色卡是由暗到亮按顺序排列的，并且没有alpha，可以通过GIMP来调整 */
+    /* TODO 增加色卡的判断以及排序，防止色卡不是按照数值进行排序的 */
+    for (i = 0; i < 4; i++) {
+        line_begin = line_end + 1;
+        line_end = strstr(line_begin, "\n");
+        color_tab[i] = line_begin[1];
+    }
+
+    /* 循环读取数据并按照色卡转换为灰度等级进行存储, 0(全黑) - 3(全白) */
+    memset(pic, 0, width * height);
+    for (i = 0; i < height; i++) {
+        line_begin = line_end + 1;
+        line_end = strstr(line_begin, "\n");
+        for (j = 0; j < width; j++) {
+            for (k = 0; k < 4; k++) {
+                /* +1跳过行首的引号 */
+                if (line_begin[j + 1] == color_tab[k])
+                    pic[width * i + j] = k;
+            }
+        }
+    }
+
+    return pic;
 }
 
 u8g2_t u8g2;
 
 void app_main(void)
 {
+    char *pic;
+    int i, j, k;
+
     configure_gpio();
     vTaskDelay(200/portTICK_PERIOD_MS);
     u8g2_Setup_ssd1619a_400x300_f(&u8g2, &u8g2_cb_r0, u8g2_esp32_spi_byte_cb, u8g2_esp32_gpio_and_delay_cb);
     u8x8_InitDisplay(u8g2_GetU8x8(&u8g2));
     u8g2_SetDrawColor(&u8g2, 0);
     u8g2_ClearBufferV(&u8g2, 0xff);
+    u8g2_SendBuffer(&u8g2);
     u8g2_SetFont(&u8g2, u8g2_font_wqy14_t_gb2312);
     u8g2_DrawUTF8(&u8g2, 13, 100, "你好，世界");
     u8g2_SendBuffer(&u8g2);
 
     u8g2_DrawStr(&u8g2, 5, 250, "Hello world");
     u8g2_UpdateDisplay(&u8g2);
-    u8x8_RefreshDisplayV( u8g2_GetU8x8(&u8g2), 1 );
+    u8x8_RefreshDisplayM(u8g2_GetU8x8(&u8g2), 0x1);
 
-    u8g2_DrawStr(&u8g2, 5, 50, "Hello world");
-    u8g2_UpdateDisplay(&u8g2);
-    u8x8_RefreshDisplayV( u8g2_GetU8x8(&u8g2), 1 );
+    pic = gray4_xpm_cov(moon_xpm_start);
+    if (!pic)
+        return;
 
+    u8g2_ClearBufferV(&u8g2, 0xff);
+    u8g2_SendBuffer(&u8g2);
 
-    u8g2_DrawStr(&u8g2, 250, 50, "Hello world");
-    u8g2_UpdateDisplay(&u8g2);
-    u8x8_RefreshDisplayV( u8g2_GetU8x8(&u8g2), 1 );
+    /* 分3次进行刷新,因为全白不需要刷新 */
+    for (i = 0; i < 3; i++) {
+        u8g2_ClearBufferV(&u8g2, 0xff);
+        for (j = 0; j < 300; j++) {
+            for (k = 0; k < 400; k++) {
+                if (pic[400 * j + k] < i+1)
+                    u8g2_DrawPixel(&u8g2, k, j);
+            }
+        }
+        u8g2_UpdateDisplay(&u8g2);
+        u8x8_RefreshDisplayM(u8g2_GetU8x8(&u8g2), i < 2 ? 0x11 : 0x12 );
+    }
 
-    u8g2_DrawStr(&u8g2, 250, 200, "Hello world");
-    u8g2_UpdateDisplay(&u8g2);
-    u8x8_RefreshDisplayV( u8g2_GetU8x8(&u8g2), 1 );
-
+    free(pic);
     u8g2_SetPowerSave(&u8g2, 1);
 }
